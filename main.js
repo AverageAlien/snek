@@ -123,16 +123,32 @@ function Block(type, x, y) {
     return this;
 }
 
+
 let Player = new Block("Head",
     GridData.Width / 2 + Math.floor(GridData.Width / 2 * (Math.random() - 0.5)),
     GridData.Height / 2 + Math.floor(GridData.Height / 2 * (Math.random() - 0.5))
 );
 
-let Food = new Block("Food",
-    Math.floor(GridData.Width * Math.random()),
-    Math.floor(GridData.Height * Math.random())
-);
-// TODO: check if food spawned on snake
+function CheckFreeSpace(x, y) {
+    for (let i = 0; i < Body.length; ++i) {
+        if (Body[i].X == x && Body[i].Y == y) return false;
+    }
+    if (Player.X == x && Player.Y == y) return false;
+    else return true;
+}
+
+let Food;
+{
+    let FoodCoords;
+    do {
+        FoodCoords = {
+            X: Math.floor(GridData.Width * Math.random()),
+            Y: Math.floor(GridData.Height * Math.random())
+        }
+    } while (!CheckFreeSpace(FoodCoords.X, FoodCoords.Y));
+    
+    Food = new Block("Food", FoodCoords.X, FoodCoords.Y);
+}
 
 
 let GameLoop = setInterval(function() {
@@ -176,11 +192,14 @@ let GameLoop = setInterval(function() {
     PrevDirection = Direction;
     if (Player.X == Food.X && Player.Y == Food.Y) {
         ++Length;
-        console.log("Ate food. Length: " + Length);
-        Food.Move(
-            Math.floor(GridData.Width * Math.random()),
-            Math.floor(GridData.Height * Math.random())
-        );
+        let FoodCoords;
+        do {
+            FoodCoords = {
+                X: Math.floor(GridData.Width * Math.random()),
+                Y: Math.floor(GridData.Height * Math.random())
+            }
+        } while (!CheckFreeSpace(FoodCoords.X, FoodCoords.Y));
+        Food.Move(FoodCoords.X, FoodCoords.Y);
     }
     if (Body.length == Length) {
         Body.shift().Delete();
@@ -210,7 +229,6 @@ document.body.addEventListener("keydown", function(event) {
     }
 });
 Canvas.addEventListener("keydown", function(event) { // WASD keyboard input
-    //console.log(event.key);
     switch(event.key) {
         case 'd':
             if (PrevDirection != 2) Direction = 0;
@@ -226,16 +244,6 @@ Canvas.addEventListener("keydown", function(event) { // WASD keyboard input
             break;
         case ' ': // stop game (for debug)
             clearInterval(GameLoop);
-            // console.log("Length: " + Length);
-            // console.log("Body array length: " + Body.length);
-            // console.log("Foreach:");
-            // Body.forEach(function(b) {
-            //     console.log(`(${b.X}; ${b.Y})`);
-            // });
-            // console.log("For:");
-            // for (let i = 0; i < Body.length; ++i) {
-            //     console.log(Body[i]);
-            // }
             break;
     }
 });
