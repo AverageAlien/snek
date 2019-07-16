@@ -3,6 +3,10 @@ let Canvas = document.getElementById("main-canvas");
 let Ctx = Canvas.getContext('2d');
 Canvas.focus();
 
+// MATH extension
+Math.clamp = function(num, min, max) {
+    return(Math.max(min, Math.min(num, max)));
+}
 
 // RENDER
 
@@ -13,17 +17,17 @@ const CanvasData = {
     Framerate: 60
 };
 CanvasData.Ratio = CanvasData.Width / CanvasData.Height;
-console.log(CanvasData.Ratio);
-//console.log(CanvasData.Width / CanvasData.Height);
 const GridData = {
     Height: 32,
-    Width: 32
-    //TODO: outline
+    Width: 32,
+    Outline: 1,
+    OutlineColor: "#303030"
 }
 const BlockColors = {
     Food: "#ff0000",
     Head: "#ffffff",
-    Body: "#ffffff"
+    Body: "#ffffff",
+    Dead: "#314a3d"
 }
 
 Ctx.fillStyle = CanvasData.BgColor;
@@ -39,6 +43,25 @@ function Rect(x, y, width, height, color="#ffffff", border=0) {
     this.H = height;
     this.Color = color;
     this.Border = border;
+
+    this.Draw = function() {
+        if (this.Border > 0) {
+            Ctx.fillStyle = GridData.OutlineColor;
+        } else {
+            Ctx.fillStyle = this.Color;
+        }
+        Ctx.fillRect(this.X, this.Y, this.W, this.H);
+        if (this.Border > 0) {
+            Ctx.fillStyle = this.Color;
+            Ctx.fillRect(
+                Math.clamp(this.X + this.Border, this.X, this.X + this.W / 2),
+                Math.clamp(this.Y + this.Border, this.Y, this.Y + this.H / 2),
+                Math.clamp(this.W - this.Border * 2, 0, this.W),
+                Math.clamp(this.H - this.Border * 2, 0, this.H)
+            );
+        }
+    }
+
     return this;
 }
 
@@ -48,8 +71,7 @@ setInterval(function() { // Render loop
     Ctx.fillRect(0, 0, CanvasData.Width, CanvasData.Height);
 
     RenderObjects.forEach(function(Sprite) {
-        Ctx.fillStyle = Sprite.Color;
-        Ctx.fillRect(Sprite.X, Sprite.Y, Sprite.W, Sprite.H);
+        Sprite.Draw();
     });
 
 }, 1000 / CanvasData.Framerate);
@@ -57,13 +79,19 @@ setInterval(function() { // Render loop
 
 // GAMEPLAY
 
+// Base values
+let Body = [];
+const BaseLength = 4;
+let Length = BaseLength;
+let Direction = 0; // 0 - right, 1 - up, 2 - left, 3 - down
+let Speed = 10;
+let Alive = true;
+
+// Constructors
 function Block(type, x, y) {
     this.Type = type;
     this.X = x;
     this.Y = y;
-    if (type == "Body") { 
-        this.Age = 0;
-    }
     this.Move = function(x, y) {
         this.X = x;
         this.Y = y;
@@ -80,90 +108,132 @@ function Block(type, x, y) {
         CanvasData.Width / GridData.Width,
         CanvasData.Height / GridData.Height,
         BlockColors[this.Type],
-        0);
+        GridData.Outline);
+
+    this.SetType = function(Type) {
+        this.Type = Type;
+        this.Sprite.Color = BlockColors[this.Type];
+    }
+
     RenderObjects.push(this.Sprite);
+    if (type == "Body") {
+        Body.push(this);
+    }
     return this;
 }
-
-let Blocks = [];
-
-let Length = 4;
-let Direction = 0; // 0 - right, 1 - up, 2 - left, 3 - down
-let Speed = 3;
 
 let Player = new Block("Head",
     GridData.Width / 2 + Math.floor(GridData.Width / 2 * (Math.random() - 0.5)),
     GridData.Height / 2 + Math.floor(GridData.Height / 2 * (Math.random() - 0.5))
 );
-Blocks.push(Player);
 
 let Food = new Block("Food",
     Math.floor(GridData.Width * Math.random()),
     Math.floor(GridData.Height * Math.random())
 );
-Blocks.push(Food);
 // TODO: check if food spawned on snake
 
 
-setInterval(function() {
+let GameLoop = setInterval(function() {
     let HeadX = Player.X;
     let HeadY = Player.Y;
     console.log("Direction: " + Direction);
     switch (Direction) {
         case 0:
+            if (HeadX == GridData.Width - 1) Lose();
+            Body.forEach(function(b) {
+                if (b.X == HeadX + 1 && b.Y == HeadY) Lose();
+            });
+            if (!Alive) return;
             Player.Move(HeadX + 1, HeadY);
             break;
         case 1:
+            if (HeadY == 0) Lose();
+            Body.forEach(function(b) {
+                if (b.X == HeadX && b.Y == HeadY - 1) Lose();
+            });
+            if (!Alive) return;
             Player.Move(HeadX, HeadY - 1);
             break;
         case 2:
+            if (HeadX == 0) Lose();
+            Body.forEach(function(b) {
+                if (b.X == HeadX - 1 && b.Y == HeadY) Lose();
+            });
+            if (!Alive) return;
             Player.Move(HeadX - 1, HeadY);
             break;
         case 3:
+            if (HeadY == GridData.Height - 1) Lose();
+            Body.forEach(function(b) {
+                if (b.X == HeadX && b.Y == HeadY + 1) Lose();
+            });
+            if (!Alive) return;
             Player.Move(HeadX, HeadY + 1);
             break;
     }
     if (Player.X == Food.X && Player.Y == Food.Y) {
         ++Length;
-        console.log("Length: " + Length);
+        console.log("Ate food. Length: " + Length);
         Food.Move(
             Math.floor(GridData.Width * Math.random()),
             Math.floor(GridData.Height * Math.random())
         );
     }
-    Blocks.forEach(function(b) { // TODO: optimize this shit, use queue instead of loop
-        if (b.Type == "Body") {
-            b.Age++;
-            if (b.Age == Length) {
-                b.Delete();
-                Blocks.splice(Blocks.indexOf(b), 1); // TODO: move this inside Block object's Delete() method
-            }
-        }
-    });
-    Blocks.push(new Block("Body", HeadX, HeadY));
+    if (Body.length == Length) {
+        Body.shift().Delete();
+    } else if (Body.length > Length) {
+        throw new Error("Body array length is larger than Snake length value.");
+    }
+    new Block("Body", HeadX, HeadY);
 }, 1000 * (1 / Speed));
 
-
+function Lose() {
+    if (!Alive) return;
+    Alive = false;
+    Player.SetType("Dead");
+    Body.forEach(b => b.SetType("Dead"));
+    clearInterval(GameLoop);
+    alert("Game over! Your score: " + (Length - BaseLength));
+}
 
 
 
 
 // INPUT
 
-Canvas.addEventListener("keydown", function(event) {
-    console.log(event.key);
+document.body.addEventListener("keydown", function(event) {
+    if (document.activeElement == Canvas && event.key == ' ') {
+        event.preventDefault();
+    }
+});
+Canvas.addEventListener("keydown", function(event) { // WASD keyboard input
+    //console.log(event.key);
     switch(event.key) {
         case 'd':
-            Direction = 0;
+            if (Direction != 2) Direction = 0;
             break;
         case 'w':
-            Direction = 1;
+            if (Direction != 3) Direction = 1;
             break;
         case 'a':
-            Direction = 2;
+            if (Direction != 0) Direction = 2;
             break;
         case 's':
-            Direction = 3;
+            if (Direction != 1) Direction = 3;
+            break;
+        case ' ': // stop game (for debug)
+            clearInterval(GameLoop);
+            // console.log("Length: " + Length);
+            // console.log("Body array length: " + Body.length);
+            // console.log("Foreach:");
+            // Body.forEach(function(b) {
+            //     console.log(`(${b.X}; ${b.Y})`);
+            // });
+            // console.log("For:");
+            // for (let i = 0; i < Body.length; ++i) {
+            //     console.log(Body[i]);
+            // }
             break;
     }
 });
@@ -179,15 +249,15 @@ Canvas.addEventListener("touchstart", function(event) { // touch input
     }
     if (Touch.X > Touch.Y * CanvasData.Ratio) { // top right triangle
         if (Touch.Y > CanvasData.Height - Touch.X / CanvasData.Ratio) { // bottom right triangle
-            Direction = 0;
+            if (Direction != 2) Direction = 0;
         } else { // top left triangle
-            Direction = 1;
+            if (Direction != 3) Direction = 1;
         }
     } else { // bottom left triangle
         if (Touch.Y > CanvasData.Height - Touch.X / CanvasData.Ratio) { // bottom right triangle
-            Direction = 3;
+            if (Direction != 1) Direction = 3;
         } else { // top left triangle
-            Direction = 2;
+            if (Direction != 0) Direction = 2;
         }
     }
 });
