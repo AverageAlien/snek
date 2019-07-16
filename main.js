@@ -84,7 +84,8 @@ let Body = [];
 const BaseLength = 4;
 let Length = BaseLength;
 let Direction = 0; // 0 - right, 1 - up, 2 - left, 3 - down
-let Speed = 10;
+let PrevDirection = 0;
+let Speed = 5;
 let Alive = true;
 
 // Constructors
@@ -172,6 +173,7 @@ let GameLoop = setInterval(function() {
             Player.Move(HeadX, HeadY + 1);
             break;
     }
+    PrevDirection = Direction;
     if (Player.X == Food.X && Player.Y == Food.Y) {
         ++Length;
         console.log("Ate food. Length: " + Length);
@@ -211,16 +213,16 @@ Canvas.addEventListener("keydown", function(event) { // WASD keyboard input
     //console.log(event.key);
     switch(event.key) {
         case 'd':
-            if (Direction != 2) Direction = 0;
+            if (PrevDirection != 2) Direction = 0;
             break;
         case 'w':
-            if (Direction != 3) Direction = 1;
+            if (PrevDirection != 3) Direction = 1;
             break;
         case 'a':
-            if (Direction != 0) Direction = 2;
+            if (PrevDirection != 0) Direction = 2;
             break;
         case 's':
-            if (Direction != 1) Direction = 3;
+            if (PrevDirection != 1) Direction = 3;
             break;
         case ' ': // stop game (for debug)
             clearInterval(GameLoop);
@@ -249,15 +251,15 @@ Canvas.addEventListener("touchstart", function(event) { // touch input
     }
     if (Touch.X > Touch.Y * CanvasData.Ratio) { // top right triangle
         if (Touch.Y > CanvasData.Height - Touch.X / CanvasData.Ratio) { // bottom right triangle
-            if (Direction != 2) Direction = 0;
+            if (PrevDirection != 2) Direction = 0;
         } else { // top left triangle
-            if (Direction != 3) Direction = 1;
+            if (PrevDirection != 3) Direction = 1;
         }
     } else { // bottom left triangle
         if (Touch.Y > CanvasData.Height - Touch.X / CanvasData.Ratio) { // bottom right triangle
-            if (Direction != 1) Direction = 3;
+            if (PrevDirection != 1) Direction = 3;
         } else { // top left triangle
-            if (Direction != 0) Direction = 2;
+            if (PrevDirection != 0) Direction = 2;
         }
     }
 });
