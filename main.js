@@ -12,6 +12,9 @@ const CanvasData = {
     Height: 512,
     Framerate: 60
 };
+CanvasData.Ratio = CanvasData.Width / CanvasData.Height;
+console.log(CanvasData.Ratio);
+//console.log(CanvasData.Width / CanvasData.Height);
 const GridData = {
     Height: 32,
     Width: 32
@@ -162,5 +165,29 @@ Canvas.addEventListener("keydown", function(event) {
         case 's':
             Direction = 3;
             break;
+    }
+});
+
+document.body.addEventListener("touchstart", function(event) { // prevent touch gestures
+    if (event.target == Canvas) event.preventDefault();
+});
+Canvas.addEventListener("touchstart", function(event) { // touch input
+    let Rect = Canvas.getBoundingClientRect();
+    let Touch = {
+        X: event.touches[0].clientX - Rect.left,
+        Y: event.touches[0].clientY - Rect.top
+    }
+    if (Touch.X > Touch.Y * CanvasData.Ratio) { // top right triangle
+        if (Touch.Y > CanvasData.Height - Touch.X / CanvasData.Ratio) { // bottom right triangle
+            Direction = 0;
+        } else { // top left triangle
+            Direction = 1;
+        }
+    } else { // bottom left triangle
+        if (Touch.Y > CanvasData.Height - Touch.X / CanvasData.Ratio) { // bottom right triangle
+            Direction = 3;
+        } else { // top left triangle
+            Direction = 2;
+        }
     }
 });
