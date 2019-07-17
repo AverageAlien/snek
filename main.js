@@ -3,6 +3,8 @@ let Canvas = document.getElementById("main-canvas");
 let Ctx = Canvas.getContext('2d');
 Canvas.focus();
 
+let DeathSound = new Audio("oof.mp3");
+
 // MATH extension
 Math.clamp = function(num, min, max) {
     return(Math.max(min, Math.min(num, max)));
@@ -215,6 +217,7 @@ function Lose() {
     Player.SetType("Dead");
     Body.forEach(b => b.SetType("Dead"));
     clearInterval(GameLoop);
+    DeathSound.play();
     alert("Game over! Your score: " + (Length - BaseLength));
 }
 
