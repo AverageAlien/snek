@@ -99,7 +99,7 @@ function Block(type, x, y) {
         this.X = x;
         this.Y = y;
         this.Sprite.X = this.X * CanvasData.Width / GridData.Width;
-        this.Sprite.Y = this.Y * CanvasData.Width / GridData.Width;
+        this.Sprite.Y = this.Y * CanvasData.Height / GridData.Height;
     }
     this.Delete = function() {
         RenderObjects.splice(RenderObjects.indexOf(this.Sprite), 1);
